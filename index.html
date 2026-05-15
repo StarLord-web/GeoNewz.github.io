@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GeoNewz – World at a Glance</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #c0392b; --red-dark: #922b21;
+    --ink: #1a1a1a; --ink-mid: #3d3d3d; --ink-light: #6b6b6b;
+    --paper: #fdfaf5; --paper-dark: #f0ebe0; --paper-mid: #f5f0e8;
+    --border: #d4c9b5; --gold: #c9a84c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); font-size: 15px; line-height: 1.6; }
+
+  /* TOP BAR */
+  #topbar { background: var(--ink); color: #bbb; font-size: 11px; padding: 5px 24px; display: flex; justify-content: space-between; align-items: center; }
+  #live-time { color: var(--gold); font-weight: 600; font-variant-numeric: tabular-nums; }
+  #status-dot { width: 6px; height: 6px; border-radius: 50%; background: #27ae60; display: inline-block; transition: background 0.3s; }
+  #status-dot.loading { background: var(--gold); animation: blink 0.8s infinite; }
+  #status-dot.error { background: var(--red); }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  /* MASTHEAD */
+  #masthead { background: var(--paper); border-bottom: 3px solid var(--red); padding: 12px 24px 10px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
+  .mast-side { font-size: 11px; color: var(--ink-light); line-height: 1.8; }
+  .mast-side.right { text-align: right; }
+  #logo { font-family: 'Playfair Display', serif; font-size: 54px; font-weight: 900; color: var(--red); letter-spacing: -2px; line-height: 1; text-decoration: none; display: block; text-align: center; }
+  #logo span { color: var(--ink); }
+  #tagline { font-size: 9.5px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--ink-light); text-align: center; margin-top: 3px; }
+
+  /* NAV */
+  #navbar { background: var(--red); position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.25); }
+  #nav-inner { display: flex; align-items: stretch; padding: 0 20px; overflow-x: auto; scrollbar-width: none; }
+  #nav-inner::-webkit-scrollbar { display: none; }
+  .nav-item { color: rgba(255,255,255,0.82); padding: 10px 14px; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.15s; user-select: none; }
+  .nav-item:hover { color: #fff; background: rgba(0,0,0,0.1); }
+  .nav-item.active { color: #fff; border-bottom-color: #fff; background: rgba(0,0,0,0.15); }
+  #search-wrap { margin-left: auto; display: flex; align-items: center; }
+  #search-input { background: rgba(255,255,255,0.12); border: none; border-bottom: 2px solid transparent; color: #fff; padding: 8px 12px; font-size: 12px; font-family: inherit; outline: none; width: 160px; transition: all 0.2s; }
+  #search-input::placeholder { color: rgba(255,255,255,0.4); }
+  #search-input:focus { background: rgba(255,255,255,0.2); border-bottom-color: rgba(255,255,255,0.6); width: 210px; }
+  #search-btn { background: rgba(255,255,255,0.18); border: none; color: #fff; padding: 8px 14px; font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer; transition: background 0.15s; }
+  #search-btn:hover { background: rgba(255,255,255,0.28); }
+
+  /* TICKER */
+  #breaking-bar { background: var(--ink); color: #eee; display: flex; align-items: center; height: 30px; overflow: hidden; border-bottom: 2px solid var(--red); }
+  #breaking-label { background: var(--red); padding: 0 14px; height: 100%; display: flex; align-items: center; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; white-space: nowrap; flex-shrink: 0; }
+  #ticker-track { overflow: hidden; flex: 1; position: relative; }
+  #ticker-inner { white-space: nowrap; font-size: 12px; animation: ticker 70s linear infinite; display: inline-block; padding-left: 30px; }
+  @keyframes ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+  .tick-sep { margin: 0 18px; opacity: 0.3; }
+
+  /* LAYOUT */
+  #content-wrap { max-width: 1260px; margin: 0 auto; padding: 0 20px; }
+  #main-layout { display: grid; grid-template-columns: 1fr 285px; gap: 0; }
+
+  /* HERO */
+  #hero { padding: 18px 0; display: grid; grid-template-columns: 2fr 1fr; gap: 0; border-bottom: 1px solid var(--border); }
+  #hero-main { padding-right: 22px; border-right: 1px solid var(--border); }
+  #hero-side { padding-left: 22px; }
+
+  /* SECTION HEADERS */
+  .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding-bottom: 7px; border-bottom: 2px solid var(--ink); }
+  .section-title { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 700; color: var(--ink); text-transform: uppercase; letter-spacing: 0.05em; }
+  .section-title.red { color: var(--red); }
+  .section-line { flex: 1; height: 1px; background: var(--border); }
+
+  /* CARDS */
+  .article-card { cursor: pointer; }
+  .article-card:hover .article-headline { color: var(--red); }
+  .article-headline { font-family: 'Playfair Display', serif; font-weight: 700; color: var(--ink); line-height: 1.25; transition: color 0.15s; }
+  .article-meta { font-size: 11px; color: var(--ink-light); margin-top: 4px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .article-source { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 6px; background: var(--red); color: #fff; border-radius: 1px; display: inline-block; }
+  .article-excerpt { font-family: 'Source Serif 4', serif; font-size: 13.5px; color: var(--ink-mid); margin-top: 7px; line-height: 1.65; }
+
+  /* HERO ARTICLE */
+  .hero-img-wrap { width: 100%; height: 255px; overflow: hidden; position: relative; margin-bottom: 14px; background: var(--paper-dark); }
+  .hero-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .hero-img-wrap .no-img { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 56px; background: linear-gradient(135deg, var(--paper-dark), var(--border)); }
+  .hero-source-badge { position: absolute; bottom: 10px; left: 10px; background: var(--red); color: #fff; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 9px; }
+
+  /* SIDE */
+  .side-article { padding: 11px 0; border-bottom: 1px solid var(--border); }
+  .side-article:last-child { border-bottom: none; padding-bottom: 0; }
+  .side-article-inner { display: flex; gap: 10px; align-items: flex-start; }
+  .side-thumb { width: 72px; height: 52px; object-fit: cover; flex-shrink: 0; background: var(--paper-dark); }
+
+  /* GRID */
+  .news-grid { display: grid; grid-template-columns: repeat(3,1fr); }
+  .news-grid-2 { display: grid; grid-template-columns: repeat(2,1fr); }
+  .grid-article { padding: 14px 16px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .news-grid .grid-article:nth-child(3n) { border-right: none; }
+  .news-grid-2 .grid-article:nth-child(2n) { border-right: none; }
+  .grid-article .article-headline { font-size: 15px; }
+  .grid-article .article-excerpt { font-size: 12.5px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .section-row { padding: 18px 0; border-bottom: 1px solid var(--border); }
+
+  /* SIDEBAR */
+  #sidebar { padding-left: 22px; border-left: 1px solid var(--border); padding-top: 18px; }
+  .sidebar-section { margin-bottom: 22px; }
+  .sidebar-title { font-family: 'Playfair Display', serif; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; padding-bottom: 7px; border-bottom: 2px solid var(--red); margin-bottom: 10px; }
+  .trending-item { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--paper-dark); cursor: pointer; }
+  .trending-item:hover .trending-text { color: var(--red); }
+  .trending-item:last-child { border-bottom: none; }
+  .trending-num { font-size: 20px; font-weight: 900; color: var(--border); font-family: 'Playfair Display', serif; line-height: 1; min-width: 24px; }
+  .trending-text { font-size: 12.5px; font-weight: 500; color: var(--ink-mid); line-height: 1.4; transition: color 0.15s; }
+  .topic-chip { display: inline-block; background: var(--paper-mid); border: 1px solid var(--border); color: var(--ink-mid); font-size: 11.5px; padding: 4px 11px; border-radius: 2px; margin: 3px 2px; cursor: pointer; transition: all 0.15s; }
+  .topic-chip:hover { background: var(--red); color: #fff; border-color: var(--red); }
+
+  /* SKELETON */
+  .skeleton { background: linear-gradient(90deg,#ede8df 25%,#e4ddd2 50%,#ede8df 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 2px; }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+  .sk-img { height: 255px; margin-bottom: 14px; }
+  .sk-h { height: 20px; margin-bottom: 8px; }
+  .sk-line { height: 13px; margin-bottom: 6px; }
+  .sk-med { width: 75%; } .sk-short { width: 55%; }
+
+  /* MODAL */
+  #modal-overlay { display: none; position: fixed; inset: 0; background: rgba(8,6,4,0.65); z-index: 999; align-items: flex-start; justify-content: center; padding: 30px 20px; overflow-y: auto; }
+  #modal-overlay.open { display: flex; }
+  #modal-box { background: var(--paper); max-width: 740px; width: 100%; border-radius: 2px; animation: mIn 0.2s ease; }
+  @keyframes mIn { from{opacity:0;transform:translateY(-14px)} to{opacity:1;transform:translateY(0)} }
+  #modal-topbar { background: var(--ink); color: #fff; padding: 11px 20px; display: flex; justify-content: space-between; align-items: center; }
+  #modal-src-top { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.55); }
+  #modal-close { background: none; border: none; color: rgba(255,255,255,0.65); font-size: 20px; cursor: pointer; line-height: 1; }
+  #modal-close:hover { color: #fff; }
+  #modal-hero-img { width: 100%; max-height: 340px; object-fit: cover; display: none; }
+  #modal-body { padding: 22px 28px 28px; }
+  #modal-kicker { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--red); margin-bottom: 7px; }
+  #modal-headline { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 700; line-height: 1.25; margin-bottom: 12px; }
+  #modal-meta { font-size: 11.5px; color: var(--ink-light); display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+  #modal-content { font-family: 'Source Serif 4', serif; font-size: 15px; line-height: 1.8; color: var(--ink-mid); }
+  #modal-content p { margin-bottom: 14px; }
+  .read-more-link { display: inline-block; margin-top: 14px; font-size: 12.5px; font-weight: 600; color: var(--red); text-decoration: none; border-bottom: 1px solid currentColor; padding-bottom: 1px; }
+  .read-more-link:hover { color: var(--red-dark); }
+
+  /* TAGS */
+  .tag-row { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 5px; }
+  .tag { font-size: 10px; padding: 2px 8px; background: var(--paper-mid); border: 1px solid var(--border); border-radius: 10px; color: var(--ink-light); cursor: pointer; }
+  .tag:hover { background: var(--red); color: #fff; border-color: var(--red); }
+
+  /* TOAST */
+  #toast { position: fixed; bottom: 22px; right: 22px; background: var(--ink); color: #eee; padding: 10px 16px; border-radius: 2px; font-size: 12.5px; z-index: 9999; transform: translateY(50px); opacity: 0; transition: all 0.25s; max-width: 300px; border-left: 3px solid var(--gold); pointer-events: none; }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.err { border-left-color: var(--red); }
+  #toast.ok { border-left-color: #27ae60; }
+
+  .error-state { text-align: center; padding: 40px 20px; color: var(--ink-light); font-size: 13px; }
+  .error-state .err-ico { font-size: 30px; display: block; margin-bottom: 8px; }
+
+  #footer { background: var(--ink); color: rgba(255,255,255,0.38); padding: 18px 24px; text-align: center; font-size: 11.5px; margin-top: 28px; }
+  #footer strong { color: var(--red); }
+
+  /* Side thumbnail placeholder */
+  .side-thumb-ph {
+    width: 72px; height: 52px; flex-shrink: 0;
+    background: var(--paper-dark); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; border-radius: 2px;
+  }
+
+  /* ── TABLET (≤900px) ── */
+  @media(max-width:900px) {
+    #hero { grid-template-columns: 1fr; }
+    #hero-main { padding-right: 0; border-right: none; border-bottom: 1px solid var(--border); padding-bottom: 16px; }
+    #hero-side { padding-left: 0; padding-top: 14px; }
+    #main-layout { grid-template-columns: 1fr; }
+    #sidebar { padding-left: 0; border-left: none; border-top: 1px solid var(--border); padding-top: 18px; margin-top: 10px; }
+    .news-grid { grid-template-columns: repeat(2,1fr); }
+    .news-grid .grid-article:nth-child(3n) { border-right: 1px solid var(--border); }
+    .news-grid .grid-article:nth-child(2n) { border-right: none; }
+    .news-grid-2 { grid-template-columns: 1fr; }
+    #search-input { width: 110px; }
+    #search-input:focus { width: 150px; }
+  }
+
+  /* ── MOBILE (≤600px) ── */
+  @media(max-width:600px) {
+    /* Topbar: hide secondary info, keep time */
+    #topbar { padding: 5px 12px; font-size: 10px; }
+    #topbar > div:last-child { display: none; }
+
+    /* Masthead: stack vertically */
+    #masthead { grid-template-columns: 1fr; text-align: center; padding: 10px 12px 8px; gap: 4px; }
+    .mast-side { display: none; }
+    #logo { font-size: 38px; }
+    #tagline { font-size: 9px; }
+
+    /* Navbar: hide search, rely on scroll */
+    #nav-inner { padding: 0 8px; }
+    .nav-item { padding: 9px 10px; font-size: 11px; }
+    #search-wrap { display: none; }
+
+    /* Show a standalone search bar below navbar */
+    #mobile-search-bar {
+      display: flex; background: var(--paper-dark);
+      border-bottom: 1px solid var(--border); padding: 7px 12px; gap: 6px;
+    }
+    #mobile-search-bar input {
+      flex: 1; background: #fff; border: 1px solid var(--border);
+      padding: 7px 10px; font-size: 13px; font-family: inherit;
+      outline: none; border-radius: 2px; color: var(--ink);
+    }
+    #mobile-search-bar button {
+      background: var(--red); color: #fff; border: none;
+      padding: 7px 14px; font-size: 12px; font-weight: 600;
+      font-family: inherit; cursor: pointer; border-radius: 2px;
+    }
+
+    /* Content */
+    #content-wrap { padding: 0 12px; }
+
+    /* Hero image shorter on small screens */
+    .hero-img-wrap { height: 190px; }
+    .sk-img { height: 190px; }
+
+    /* Hero headline smaller */
+    #hero-main-article .article-headline { font-size: 20px !important; }
+
+    /* Grid: single column */
+    .news-grid { grid-template-columns: 1fr; }
+    .news-grid .grid-article { border-right: none !important; }
+    .news-grid-2 { grid-template-columns: 1fr; }
+
+    /* Sidebar: horizontal chips scroll */
+    #sidebar { padding-top: 14px; }
+    .sidebar-section { margin-bottom: 16px; }
+
+    /* Modal: full-screen */
+    #modal-overlay { padding: 0; align-items: flex-end; }
+    #modal-box { max-width: 100%; border-radius: 6px 6px 0 0; max-height: 92vh; overflow-y: auto; }
+    #modal-hero-img { max-height: 200px; }
+    #modal-body { padding: 16px 16px 24px; }
+    #modal-headline { font-size: 19px; }
+
+    /* Toast */
+    #toast { bottom: 12px; right: 12px; left: 12px; max-width: unset; font-size: 12px; }
+
+    /* Section header font */
+    .section-title { font-size: 14px; }
+
+    /* Grid article padding */
+    .grid-article { padding: 12px 10px; }
+  }
+
+  /* ── SMALL MOBILE (≤380px) ── */
+  @media(max-width:380px) {
+    #logo { font-size: 32px; }
+    .nav-item { padding: 8px 8px; font-size: 10px; }
+    .hero-img-wrap { height: 160px; }
+    .sk-img { height: 160px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div style="display:flex;gap:16px;align-items:center">
+    <span id="live-time"></span>
+    <span id="topbar-date" style="color:#777"></span>
+  </div>
+  <div style="display:flex;gap:12px;align-items:center">
+    <span id="status-dot"></span>
+    <span id="status-text" style="color:#888">Loading…</span>
+    <span style="color:#555">·</span>
+    <span style="color:#777">Cache: <strong id="cache-count" style="color:var(--gold)">0</strong></span>
+  </div>
+</div>
+
+<!-- MASTHEAD -->
+<div id="masthead">
+  <div class="mast-side">
+    <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-mid)">GeoNewz Daily</div>
+    <div style="color:#999">Real-time Global News</div>
+  </div>
+  <div>
+    <a id="logo" href="javascript:void(0)" onclick="loadCategory('top',document.querySelector('[data-cat=top]'))">Geo<span>Newz</span></a>
+    <div id="tagline">Truth · Speed · Perspective</div>
+  </div>
+  <div class="mast-side right">
+    <div id="edition-date" style="color:#999"></div>
+    <div>Powered by NewsData.io</div>
+  </div>
+</div>
+
+<!-- NAVBAR -->
+<nav id="navbar">
+  <div id="nav-inner">
+    <span class="nav-item active" data-cat="top"           onclick="loadCategory('top',this)">Top News</span>
+    <span class="nav-item"        data-cat="world"         onclick="loadCategory('world',this)">World</span>
+    <span class="nav-item"        data-cat="india"         onclick="loadCategory('india',this)">India</span>
+    <span class="nav-item"        data-cat="business"      onclick="loadCategory('business',this)">Business</span>
+    <span class="nav-item"        data-cat="technology"    onclick="loadCategory('technology',this)">Technology</span>
+    <span class="nav-item"        data-cat="sports"        onclick="loadCategory('sports',this)">Sports</span>
+    <span class="nav-item"        data-cat="science"       onclick="loadCategory('science',this)">Science</span>
+    <span class="nav-item"        data-cat="entertainment" onclick="loadCategory('entertainment',this)">Entertainment</span>
+    <span class="nav-item"        data-cat="health"        onclick="loadCategory('health',this)">Health</span>
+    <div id="search-wrap">
+      <input id="search-input" type="text" placeholder="Search news…" onkeydown="if(event.key==='Enter')doSearch()" />
+      <button id="search-btn" onclick="doSearch()">Search</button>
+    </div>
+  </div>
+</nav>
+
+<!-- MOBILE SEARCH BAR (hidden on desktop via CSS) -->
+<div id="mobile-search-bar" style="display:none">
+  <input type="text" id="mobile-search-input" placeholder="Search news…" onkeydown="if(event.key==='Enter')doMobileSearch()" />
+  <button onclick="doMobileSearch()">🔍</button>
+</div>
+
+<!-- TICKER -->
+<div id="breaking-bar">
+  <div id="breaking-label">⚡ Live</div>
+  <div id="ticker-track"><span id="ticker-inner">Fetching headlines…</span></div>
+</div>
+
+<!-- CONTENT -->
+<div id="content-wrap">
+  <div id="main-layout">
+    <div id="main-col">
+
+      <div id="hero">
+        <div id="hero-main">
+          <div class="section-header">
+            <span class="section-title red" id="hero-section-title">Top Stories</span>
+            <span class="section-line"></span>
+          </div>
+          <div id="hero-main-article">
+            <div class="skeleton sk-img"></div>
+            <div class="skeleton sk-h sk-med"></div>
+            <div class="skeleton sk-h sk-short"></div>
+            <div class="skeleton sk-line" style="margin-top:10px"></div>
+            <div class="skeleton sk-line sk-med"></div>
+            <div class="skeleton sk-line sk-short"></div>
+          </div>
+        </div>
+        <div id="hero-side">
+          <div class="section-header">
+            <span class="section-title" style="font-size:14px">Latest</span>
+            <span class="section-line"></span>
+          </div>
+          <div id="hero-side-articles">
+            <div class="side-article"><div class="skeleton sk-line sk-med" style="height:14px"></div><div class="skeleton sk-line sk-short" style="margin-top:6px;height:11px"></div></div>
+            <div class="side-article"><div class="skeleton sk-line sk-med" style="height:14px"></div><div class="skeleton sk-line sk-short" style="margin-top:6px;height:11px"></div></div>
+            <div class="side-article"><div class="skeleton sk-line sk-med" style="height:14px"></div></div>
+            <div class="side-article"><div class="skeleton sk-line sk-short" style="height:14px"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="sections-area"></div>
+
+    </div>
+
+    <!-- SIDEBAR -->
+    <div id="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-title">🔥 Trending</div>
+        <div id="trending-list">
+          <div class="trending-item"><span class="trending-num">1</span><span class="skeleton sk-line" style="flex:1;height:12px"></span></div>
+          <div class="trending-item"><span class="trending-num">2</span><span class="skeleton sk-line" style="flex:1;height:12px"></span></div>
+          <div class="trending-item"><span class="trending-num">3</span><span class="skeleton sk-line" style="flex:1;height:12px"></span></div>
+          <div class="trending-item"><span class="trending-num">4</span><span class="skeleton sk-line" style="flex:1;height:12px"></span></div>
+          <div class="trending-item"><span class="trending-num">5</span><span class="skeleton sk-line" style="flex:1;height:12px"></span></div>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">📌 Topics</div>
+        <div>
+          <span class="topic-chip" onclick="searchTopic('climate change')">Climate</span>
+          <span class="topic-chip" onclick="searchTopic('artificial intelligence')">AI</span>
+          <span class="topic-chip" onclick="searchTopic('stock market')">Markets</span>
+          <span class="topic-chip" onclick="searchTopic('geopolitics')">Geopolitics</span>
+          <span class="topic-chip" onclick="searchTopic('elections')">Elections</span>
+          <span class="topic-chip" onclick="searchTopic('space exploration')">Space</span>
+          <span class="topic-chip" onclick="searchTopic('cricket')">Cricket</span>
+          <span class="topic-chip" onclick="searchTopic('startup india')">Startups</span>
+          <span class="topic-chip" onclick="searchTopic('bollywood')">Bollywood</span>
+          <span class="topic-chip" onclick="searchTopic('ukraine')">Ukraine</span>
+          <span class="topic-chip" onclick="searchTopic('china')">China</span>
+          <span class="topic-chip" onclick="searchTopic('economy india')">Economy</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div id="modal-box">
+    <div id="modal-topbar">
+      <span id="modal-src-top">Article</span>
+      <button id="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <img id="modal-hero-img" alt="" onerror="this.style.display='none'" />
+    <div id="modal-body">
+      <div id="modal-kicker"></div>
+      <div id="modal-headline"></div>
+      <div id="modal-meta"></div>
+      <div id="modal-content"></div>
+    </div>
+  </div>
+</div>
+
+<footer id="footer">
+  <strong>GeoNewz</strong> &nbsp;·&nbsp; Real-time news by NewsData.io &nbsp;·&nbsp; &copy; 2025
+</footer>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────
+const API_KEY  = 'pub_6978b598635940d5ae37036206d215af';
+const API_BASE = 'https://newsdata.io/api/1';
+
+// Map categories to NewsData.io params
+// NewsData categories: business, entertainment, environment, food, health,
+// politics, science, sports, technology, top, tourism, world
+const CAT_PARAMS = {
+  top:           { category: 'top',           country: 'in', language: 'en' },
+  world:         { category: 'world',                        language: 'en' },
+  india:         { category: 'top',           country: 'in', language: 'en' },
+  business:      { category: 'business',      country: 'in', language: 'en' },
+  technology:    { category: 'technology',    country: 'in', language: 'en' },
+  sports:        { category: 'sports',        country: 'in', language: 'en' },
+  science:       { category: 'science',       country: 'in', language: 'en' },
+  entertainment: { category: 'entertainment', country: 'in', language: 'en' },
+  health:        { category: 'health',        country: 'in', language: 'en' },
+};
+
+const CAT_EMOJI = {
+  top:'📰', world:'🌍', india:'🇮🇳', business:'📈',
+  technology:'💻', sports:'⚽', science:'🔬', entertainment:'🎬', health:'🏥'
+};
+
+let currentCat  = 'top';
+let currentLabel = 'Top News';
+const CACHE = {};
+
+// ─── CLOCK ────────────────────────────────────────────
+function tick() {
+  const n = new Date();
+  document.getElementById('live-time').textContent =
+    n.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true});
+  document.getElementById('topbar-date').textContent =
+    n.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  document.getElementById('edition-date').textContent =
+    n.toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+}
+setInterval(tick,1000); tick();
+
+// ─── TOAST ────────────────────────────────────────────
+let _tt;
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'show ' + type;
+  clearTimeout(_tt); _tt = setTimeout(()=>el.className='', 3000);
+}
+
+// ─── STATUS ───────────────────────────────────────────
+function setStatus(s, t) {
+  document.getElementById('status-dot').className = s;
+  document.getElementById('status-text').textContent = t;
+}
+function updateCacheCount() {
+  document.getElementById('cache-count').textContent =
+    Object.values(CACHE).reduce((s,a)=>s+a.length,0);
+}
+
+// ─── NEWSDATA.IO FETCH ────────────────────────────────
+async function fetchNews(cat, query) {
+  const cacheKey = query ? 'q:' + query : cat;
+  if (CACHE[cacheKey] && CACHE[cacheKey].length) {
+    toast('Loaded from cache', 'ok');
+    return CACHE[cacheKey];
+  }
+
+  setStatus('loading','Fetching…');
+
+  try {
+    let url;
+    if (query) {
+      // free-text search
+      url = `${API_BASE}/news?apikey=${API_KEY}&q=${encodeURIComponent(query)}&language=en`;
+    } else {
+      const p = CAT_PARAMS[cat] || CAT_PARAMS['top'];
+      const params = new URLSearchParams({ apikey: API_KEY, ...p });
+      url = `${API_BASE}/news?${params}`;
+    }
+
+    const res  = await fetch(url);
+    const data = await res.json();
+
+    if (data.status !== 'success') throw new Error(data.message || 'API error');
+
+    // filter out articles with no title
+    const arts = (data.results || []).filter(a => a.title && a.title.trim());
+
+    CACHE[cacheKey] = arts;
+    updateCacheCount();
+    setStatus('', 'Live');
+    return arts;
+  } catch(e) {
+    setStatus('error','Error');
+    toast('Failed: ' + e.message, 'err');
+    return [];
+  }
+}
+
+// ─── HELPERS ──────────────────────────────────────────
+function timeAgo(d) {
+  if (!d) return '';
+  const m = Math.floor((Date.now() - new Date(d)) / 60000);
+  if (m < 1)  return 'Just now';
+  if (m < 60) return m + 'm ago';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + 'h ago';
+  return Math.floor(h/24) + 'd ago';
+}
+
+function srcName(a) {
+  return a.source_name || a.source_id || 'News';
+}
+
+// NewsData returns content in `content`, description in `description`
+function getExcerpt(a) {
+  return a.description || '';
+}
+
+function getBody(a) {
+  // NewsData free plan gives partial content; use content if available, else description
+  return a.content || a.description || '';
+}
+
+// safe JSON for inline onclick (avoids quote conflicts)
+function sd(a) {
+  return JSON.stringify({
+    title: a.title,
+    description: a.description,
+    content: a.content,
+    link: a.link,
+    image_url: a.image_url,
+    pubDate: a.pubDate,
+    creator: a.creator,
+    source_name: a.source_name,
+    keywords: a.keywords,
+    category: a.category
+  });
+}
+
+// ─── RENDERERS ────────────────────────────────────────
+function renderHero(a) {
+  const em = CAT_EMOJI[currentCat] || '📰';
+  const img = a.image_url
+    ? `<img src="${a.image_url}" onerror="var w=this.closest('.hero-img-wrap');if(w){w.innerHTML='<div class=\\'no-img\\'>${em}</div>';}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block" />`
+    : `<div class="no-img">${em}</div>`;
+  const author = a.creator ? (Array.isArray(a.creator) ? a.creator[0] : a.creator).substring(0,45) : srcName(a);
+  const link = a.link || '#';
+  return `<div class="article-card" onclick='openArticle(${sd(a)})'>
+    <a href="${link}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:block;text-decoration:none;color:inherit">
+      <div class="hero-img-wrap">${img}<div class="hero-source-badge">${srcName(a)}</div></div>
+    </a>
+    <a href="${link}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="text-decoration:none;color:inherit">
+      <div class="article-headline" style="font-size:26px">${a.title}</div>
+    </a>
+    <div class="article-meta">
+      <span>${author}</span><span>·</span><span>${timeAgo(a.pubDate)}</span>
+      ${link !== '#' ? `<a href="${link}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="font-size:10px;font-weight:700;color:var(--red);text-decoration:none;letter-spacing:.04em;border-bottom:1px solid var(--red)">↗ Source</a>` : ''}
+    </div>
+    ${getExcerpt(a) ? `<div class="article-excerpt">${getExcerpt(a)}</div>` : ''}
+    ${a.keywords && a.keywords.length ? `<div class="tag-row">${a.keywords.slice(0,4).map(k=>`<span class="tag" onclick="event.stopPropagation();searchTopic('${k}')">${k}</span>`).join('')}</div>` : ''}
+  </div>`;
+}
+
+function renderSide(a) {
+  const em2 = CAT_EMOJI[currentCat] || '📰';
+  const thumb = a.image_url
+    ? `<img class="side-thumb" src="${a.image_url}" onerror="this.outerHTML='<div class=\\'side-thumb-ph\\'>${em2}</div>'" loading="lazy" />`
+    : `<div class="side-thumb-ph">${em2}</div>`;
+  const link = a.link || '#';
+  return `<div class="side-article article-card" onclick='openArticle(${sd(a)})'>
+    <div class="side-article-inner">
+      <a href="${link}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${thumb}</a>
+      <div>
+        <div class="article-source">${srcName(a)}</div>
+        <a href="${link}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="text-decoration:none;color:inherit">
+          <div class="article-headline" style="font-size:13.5px;margin-top:3px">${a.title}</div>
+        </a>
+        <div class="article-meta"><span>${timeAgo(a.pubDate)}</span>${link !== '#' ? `<a href="${link}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--red);font-size:10px;font-weight:700;text-decoration:none;border-bottom:1px solid var(--red)">↗ Read</a>` : ''}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderGrid(a) {
+  const link = a.link || '#';
+  return `<div class="grid-article article-card" onclick='openArticle(${sd(a)})'>
+    <div class="article-source">${srcName(a)}</div>
+    <a href="${link}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="text-decoration:none;color:inherit">
+      <div class="article-headline" style="margin-top:5px">${a.title}</div>
+    </a>
+    <div class="article-meta">
+      <span>${timeAgo(a.pubDate)}</span>
+      ${link !== '#' ? `<a href="${link}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--red);font-size:10px;font-weight:700;text-decoration:none;border-bottom:1px solid var(--red)">↗ Read</a>` : ''}
+    </div>
+    ${getExcerpt(a) ? `<div class="article-excerpt" style="margin-top:6px">${getExcerpt(a)}</div>` : ''}
+  </div>`;
+}
+
+function skRow(cols) {
+  return Array(cols).fill(`<div class="grid-article"><div class="skeleton sk-line sk-med" style="height:18px"></div><div class="skeleton sk-line sk-short" style="margin-top:8px"></div><div class="skeleton sk-line" style="margin-top:6px"></div></div>`).join('');
+}
+
+// ─── TICKER ───────────────────────────────────────────
+function buildTicker(arts) {
+  const txt = arts.slice(0,12).map(a=>`${a.title}<span class="tick-sep">◆</span>`).join(' ');
+  const el = document.getElementById('ticker-inner');
+  el.innerHTML = txt + ' ' + txt;
+  el.style.animation='none'; el.offsetHeight; el.style.animation='';
+}
+
+// ─── TRENDING ─────────────────────────────────────────
+function buildTrending(arts) {
+  document.getElementById('trending-list').innerHTML = arts.slice(0,5).map((a,i)=>{
+    const link = a.link || '#';
+    return `<div class="trending-item" onclick='openArticle(${sd(a)})'>
+      <span class="trending-num">${i+1}</span>
+      <span class="trending-text">
+        <a href="${link}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="text-decoration:none;color:inherit">${a.title.substring(0,72)}${a.title.length>72?'…':''}</a>
+      </span>
+    </div>`;
+  }).join('');
+}
+
+// ─── LOAD CATEGORY ────────────────────────────────────
+async function loadCategory(cat, navEl) {
+  currentCat = cat;
+  currentLabel = navEl ? navEl.textContent.trim() : cat;
+
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if (navEl) navEl.classList.add('active');
+  document.getElementById('hero-section-title').textContent = currentLabel;
+
+  // skeletons
+  document.getElementById('hero-main-article').innerHTML = `
+    <div class="skeleton sk-img"></div>
+    <div class="skeleton sk-h sk-med"></div><div class="skeleton sk-h sk-short"></div>
+    <div class="skeleton sk-line" style="margin-top:10px"></div>
+    <div class="skeleton sk-line sk-med"></div><div class="skeleton sk-line sk-short"></div>`;
+  document.getElementById('hero-side-articles').innerHTML =
+    `<div class="side-article"><div class="skeleton sk-line sk-med" style="height:14px"></div></div>`.repeat(4);
+  document.getElementById('sections-area').innerHTML = `
+    <div class="section-row">
+      <div class="section-header"><span class="section-title">More Stories</span><span class="section-line"></span></div>
+      <div class="news-grid">${skRow(3)}</div>
+    </div>`;
+
+  const arts = await fetchNews(cat, null);
+
+  if (!arts.length) {
+    document.getElementById('hero-main-article').innerHTML =
+      `<div class="error-state"><span class="err-ico">📡</span>No articles found. Try another category.</div>`;
+    document.getElementById('hero-side-articles').innerHTML = '';
+    document.getElementById('sections-area').innerHTML = '';
+    return;
+  }
+
+  document.getElementById('hero-main-article').innerHTML = renderHero(arts[0]);
+  document.getElementById('hero-side-articles').innerHTML = arts.slice(1,5).map(renderSide).join('');
+  buildTicker(arts);
+  buildTrending(arts);
+
+  let html = '';
+  const rest = arts.slice(5);
+  if (rest.length) {
+    html += `<div class="section-row">
+      <div class="section-header"><span class="section-title">More in ${currentLabel}</span><span class="section-line"></span></div>
+      <div class="news-grid">${rest.slice(0,6).map(renderGrid).join('')}</div>
+    </div>`;
+  }
+  if (rest.length > 6) {
+    html += `<div class="section-row">
+      <div class="section-header"><span class="section-title">Latest Updates</span><span class="section-line"></span></div>
+      <div class="news-grid-2">${rest.slice(6,10).map(renderGrid).join('')}</div>
+    </div>`;
+  }
+  document.getElementById('sections-area').innerHTML = html;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ─── SEARCH ───────────────────────────────────────────
+async function doSearch() {
+  const q = document.getElementById('search-input').value.trim();
+  if (!q) return;
+  document.getElementById('search-input').value = '';
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  currentLabel = '"' + q + '"';
+  document.getElementById('hero-section-title').textContent = 'Search: ' + q;
+
+  document.getElementById('hero-main-article').innerHTML = `<div class="skeleton sk-img"></div><div class="skeleton sk-h sk-med"></div><div class="skeleton sk-h sk-short"></div><div class="skeleton sk-line" style="margin-top:10px"></div><div class="skeleton sk-line sk-med"></div>`;
+  document.getElementById('hero-side-articles').innerHTML =
+    `<div class="side-article"><div class="skeleton sk-line sk-med" style="height:14px"></div></div>`.repeat(4);
+  document.getElementById('sections-area').innerHTML = '';
+
+  const arts = await fetchNews(null, q);
+  if (!arts.length) {
+    document.getElementById('hero-main-article').innerHTML =
+      `<div class="error-state"><span class="err-ico">🔍</span>No results for "${q}". Try a different term.</div>`;
+    document.getElementById('hero-side-articles').innerHTML = '';
+    return;
+  }
+  document.getElementById('hero-main-article').innerHTML = renderHero(arts[0]);
+  document.getElementById('hero-side-articles').innerHTML = arts.slice(1,5).map(renderSide).join('');
+  buildTicker(arts);
+  buildTrending(arts);
+  let html = '';
+  const rest = arts.slice(5);
+  if (rest.length) {
+    html += `<div class="section-row">
+      <div class="section-header"><span class="section-title">More Results</span><span class="section-line"></span></div>
+      <div class="news-grid">${rest.slice(0,6).map(renderGrid).join('')}</div>
+    </div>`;
+  }
+  document.getElementById('sections-area').innerHTML = html;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function searchTopic(q) {
+  document.getElementById('search-input').value = q;
+  doSearch();
+}
+
+// ─── MODAL ────────────────────────────────────────────
+function openArticle(art) {
+  if (typeof art === 'string') { try { art = JSON.parse(art); } catch(e){ return; } }
+
+  document.getElementById('modal-src-top').textContent = (art.source_name||'Article').toUpperCase();
+  document.getElementById('modal-kicker').textContent  = art.source_name || '';
+
+  const img = document.getElementById('modal-hero-img');
+  if (art.image_url) { img.src = art.image_url; img.style.display = 'block'; }
+  else img.style.display = 'none';
+
+  const link = art.link || '#';
+  document.getElementById('modal-headline').innerHTML = art.link
+    ? `<a href="${link}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;border-bottom:2px solid transparent;transition:border-color 0.15s" onmouseover="this.style.borderBottomColor='var(--red)'" onmouseout="this.style.borderBottomColor='transparent'">${art.title}</a>`
+    : (art.title || '');
+
+  const author = art.creator ? (Array.isArray(art.creator)?art.creator[0]:art.creator).substring(0,60) : (art.source_name||'');
+  document.getElementById('modal-meta').innerHTML = [
+    author ? `<span>✍ ${author}</span>` : '',
+    art.pubDate ? `<span>🕐 ${timeAgo(art.pubDate)}</span>` : '',
+    art.pubDate ? `<span>${new Date(art.pubDate).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</span>` : '',
+    art.link ? `<a href="${link}" target="_blank" rel="noopener" style="color:var(--red);font-weight:700;font-size:11px;text-decoration:none;border-bottom:1px solid var(--red)">↗ ${art.source_name||'Source'}</a>` : ''
+  ].filter(Boolean).join('');
+
+  const body = getBody(art);
+  const paras = body ? body.split('\n').filter(p=>p.trim()).map(p=>`<p>${p}</p>`).join('') :
+    '<p style="color:var(--ink-light);font-style:italic">Full preview not available — read the complete article at the source.</p>';
+  document.getElementById('modal-content').innerHTML = paras +
+    (art.link ? `<a class="read-more-link" href="${link}" target="_blank" rel="noopener">Read full article at ${art.source_name||'source'} →</a>` : '');
+
+  document.getElementById('modal-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeModal(); });
+
+function doMobileSearch() {
+  const q = document.getElementById('mobile-search-input').value.trim();
+  if (!q) return;
+  document.getElementById('search-input').value = q;
+  document.getElementById('mobile-search-input').value = '';
+  doSearch();
+}
+
+// Show mobile search bar on small screens
+if (window.innerWidth <= 600) {
+  document.getElementById('mobile-search-bar').style.display = 'flex';
+}
+window.addEventListener('resize', () => {
+  document.getElementById('mobile-search-bar').style.display =
+    window.innerWidth <= 600 ? 'flex' : 'none';
+});
+
+// ─── BOOT ─────────────────────────────────────────────
+loadCategory('top', document.querySelector('[data-cat="top"]'));
+</script>
+</body>
+</html>
